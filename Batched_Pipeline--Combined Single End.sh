@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#Remove the
+#Make the list of files to analyze, based on whats in the folder containing this script
 SUFFIX="_R1_001.fastq.gz"
 ls | grep $SUFFIX | grep -v "Undetermined" | rev | cut -c17- | rev > filelist.txt
 
@@ -48,6 +48,11 @@ while read each; do
   #Align reads. -p flag is for number of processors.
   bowtie2 --score-min 'C,0,-1' -p 8 -x guides -U "$BASENAME1"_trimmed.fastq.gz -S "$BASENAME1"_Guides.sam --un "$BASENAME1"_UnalignedGuides.fastq &> "$BASENAME1"_bowtie_output.txt
   bowtie2 --score-min 'C,0,-1' -p 8 -x promoters -U "$BASENAME2"_trimmed.fastq.gz -S "$BASENAME2"_Promoters.sam --un "$BASENAME2"_UnalignedPromoters.fastq &> "$BASENAME2"_bowtie_output.txt
+  
+  #Compress reads that won't be used further
+  gzip -f9 "$BASENAME1"_UnalignedGuides.fastq
+  gzip -f9 "$BASENAME2"_UnalignedPromoters.fastq
+  
 
 
   #Sort the alignments and convert to a binary file
@@ -63,7 +68,7 @@ while read each; do
   samtools sort -n "$BASENAME2"_Promoters.sam -o "$BASENAME2"_Promoters--namesort.sam
 
   #Pseudo Paired-end
-  python ../matchMates.py "$BASENAME1"_Guides--namesort.sam "$BASENAME2"_Promoters--namesort.sam GuidesOnly.fasta "${INDIR} Pseudo Paired-end Counts.csv" > "${INDIR} matching.txt"
+  python ../matchMates.py "$BASENAME1"_Guides--namesort.sam "$BASENAME2"_Promoters--namesort.sam ../GuidesOnly.fasta "${INDIR} Pseudo Paired-end Counts.csv" > "${INDIR} matching.txt"
 
   #Remove the large files
   rm "$BASENAME1"_Guides--namesort.sam
